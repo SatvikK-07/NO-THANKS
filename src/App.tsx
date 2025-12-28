@@ -19,7 +19,8 @@ const defaultPlayers: SetupPlayer[] = [
   { id: 'p3', name: 'Bot A', isHuman: false, botStyle: 'standard' },
 ]
 
-const cardSrc = (value: number) => `/cards/${value}.png`
+const baseUrl = import.meta.env.BASE_URL
+const cardSrc = (value: number) => `${baseUrl}cards/${value}.png`
 
 const ChipCluster = ({ count }: { count: number }) => {
   const dots = Math.min(count, 12)
@@ -229,16 +230,18 @@ const CenterArea = ({
   activeCard,
   chipsOnCard,
   deckCount,
+  deckBack,
 }: {
   activeCard: number | null
   chipsOnCard: number
   deckCount: number
+  deckBack: string
 }) => (
   <div className="center-area">
     <div className="deck-stack">
       {[2, 1, 0].map((i) => (
         <div key={i} className="deck-card" style={{ transform: `translate(${i * 6}px, ${i * -6}px)` }}>
-          <div className="deck-back" />
+          <div className="deck-back" style={{ backgroundImage: `url(${deckBack})` }} />
         </div>
       ))}
       <div className="deck-count">{deckCount}</div>
@@ -258,74 +261,168 @@ const CenterArea = ({
   </div>
 )
 
-const PlayerOrbit = ({
+const PlayerSpot = ({
   player,
-  index,
-  total,
+  left,
+  top,
   isActive,
+  cardsPerRow = 4,
 }: {
   player: SetupPlayer & { chips: number; cards: number[] }
-  index: number
-  total: number
+  left: number
+  top: number
   isActive: boolean
+  cardsPerRow?: number
 }) => {
-  const angleDeg = -90 + (360 / total) * index
-  const angleRad = (angleDeg * Math.PI) / 180
-  const radiusX = total >= 5 ? 34 : 36
-  const radiusY = total >= 5 ? 24 : 26
-  const left = 50 + radiusX * Math.cos(angleRad)
-  const top = 50 + radiusY * Math.sin(angleRad)
   const sortedCards = [...player.cards].sort((a, b) => a - b)
-
   return (
     <div className="player-orbit" style={{ left: `${left}%`, top: `${top}%` }}>
-      <div className="player-rot" style={{ transform: `translate(-50%, -50%) rotate(${angleDeg}deg)` }}>
-        <div className={`player-card ${isActive ? 'active' : ''}`} style={{ transform: `rotate(${-angleDeg}deg)` }}>
-          <div className="player-header">
-            <span className="eyebrow">{player.isHuman ? 'Human' : 'Bot'}</span>
-            <strong>{player.name}</strong>
-          </div>
-          <div className="player-fan">
-            {sortedCards.map((c, i) => (
-              <div
-                key={c}
-                className="fan-card"
-                style={{ transform: `rotate(${(i - sortedCards.length / 2) * 4}deg)` }}
-              >
-                <img src={cardSrc(c)} alt={`Card ${c}`} />
-              </div>
-            ))}
-            {sortedCards.length === 0 && <div className="muted">No cards</div>}
-          </div>
+      <div className={`player-card ${isActive ? 'active' : ''}`}>
+        <div className="player-header">
+          <span className="eyebrow">{player.isHuman ? 'Human' : 'Bot'}</span>
+          <strong>{player.name}</strong>
+        </div>
+        <div className="player-fan" style={{ ['--cols' as string]: cardsPerRow }}>
+          {sortedCards.map((c, i) => (
+            <div
+              key={c}
+              className="fan-card"
+              style={{ transform: `rotate(${(i - sortedCards.length / 2) * 4}deg)` }}
+            >
+              <img src={cardSrc(c)} alt={`Card ${c}`} />
+            </div>
+          ))}
+          {sortedCards.length === 0 && <div className="muted">No cards</div>}
         </div>
       </div>
     </div>
   )
 }
 
-const RemovedPile = ({ animating, runKey }: { animating: boolean; runKey: number }) => (
-  <>
-    <div className="removed-pile">
-      <div className="pile-stack">
-        {[2, 1, 0].map((i) => (
-          <div key={i} className="deck-card tiny" style={{ transform: `translate(${i * 4}px, ${i * -4}px)` }}>
-            <div className="deck-back tiny" />
-          </div>
-        ))}
+const getPlayerPositions = (count: number): { left: number; top: number }[] => {
+  if (count === 3) {
+    return [
+      { left: 50, top: 8 }, // top
+      { left: 15, top: 28 }, // left
+      { left: 85, top: 28 }, // right
+    ]
+  }
+  if (count === 4) {
+    return [
+      { left: 35, top: 12 },
+      { left: 65, top: 12 },
+      { left: 15, top: 32 },
+      { left: 85, top: 32 },
+    ]
+  }
+  if (count === 5) {
+    return [
+      { left: 35, top: 10 }, // top-left
+      { left: 65, top: 10 }, // top-right
+      { left: 15, top: 32 }, // mid-left
+      { left: 85, top: 32 }, // mid-right
+      { left: 50, top: 42 }, // center player (aligned with sides, slightly lower)
+    ]
+  }
+  // default: simple circle
+  return [0, 1, 2, 3, 4].slice(0, count).map((i) => {
+    const angle = (-90 + (360 / count) * i) * (Math.PI / 180)
+    const rx = 34
+    const ry = 26
+    return { left: 50 + rx * Math.cos(angle), top: 50 + ry * Math.sin(angle) }
+  })
+}
+
+const RulesModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  if (!open) return null
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal rules-modal">
+        <div className="modal-header">
+          <h3>Rules</h3>
+          <button className="ghost" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <ul className="rules-list">
+          <li>Deck has cards 3–35; 9 random cards are removed face-down and never shown.</li>
+          <li>Each player starts with 11 chips. Goal: lowest total score wins.</li>
+          <li>Your turn: either Pass (pay 1 chip onto the face-up card) or Take (take the card and all chips on it). If you have 0 chips, you must Take.</li>
+          <li>After you Take, you immediately face the next card and decide again, so you can take multiple in a row.</li>
+          <li>Scoring: Add card values, but consecutive runs only count the lowest card in that run. Subtract 1 point per chip you still have. Example: cards 27,28,29,30,10 with 5 chips → (27 + 10) – 5 = 32.</li>
+          <li>Winner: the player with the lowest final score.</li>
+        </ul>
       </div>
-      <span className="muted">9 removed</span>
     </div>
-    {animating && (
-      <div className="removal-layer" key={runKey}>
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div className="removal-card" style={{ animationDelay: `${i * 0.08}s` }} key={i}>
-            <div className="deck-back" />
-          </div>
-        ))}
-      </div>
-    )}
-  </>
+  )
+}
+
+const RemovedPile = ({
+  deckBack,
+}: {
+  deckBack: string
+}) => (
+  <div className="removed-pile">
+    <div className="pile-stack">
+      {[2, 1, 0].map((i) => (
+        <div key={i} className="deck-card tiny" style={{ transform: `translate(${i * 4}px, ${i * -4}px)` }}>
+          <div className="deck-back tiny" style={{ backgroundImage: `url(${deckBack})` }} />
+        </div>
+      ))}
+    </div>
+    <span className="muted">9 removed</span>
+  </div>
 )
+
+const EndModal = ({
+  game,
+  onRematch,
+  onHome,
+}: {
+  game: GameState
+  onRematch: () => void
+  onHome: () => void
+}) => {
+  if (game.status !== 'done' || !game.scores) return null
+  const winner = game.scores[0]
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal score-modal">
+        <div className="modal-header">
+          <div>
+            <p className="eyebrow">Game over</p>
+            <h2>Winner: {winner.name}</h2>
+            <p className="muted">
+              Score {winner.total} (cards {winner.cardPoints} - chips {winner.chipPoints})
+            </p>
+          </div>
+          <div className="actions">
+            <button className="ghost" onClick={onHome} aria-label="Home">
+              ⌂ Home
+            </button>
+            <button className="cta" onClick={onRematch}>
+              Rematch
+            </button>
+          </div>
+        </div>
+        <div className="score-grid">
+          {game.scores.map((s, idx) => (
+            <div key={s.playerId} className="score-row">
+              <div className="rank">{idx + 1}</div>
+              <div className="score-name">
+                <strong>{s.name}</strong>
+                <p className="muted">
+                  Cards: {s.cardPoints} — Chips: -{s.chipPoints}
+                </p>
+              </div>
+              <div className="total">{s.total}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const ControlBar = ({
   activePlayer,
@@ -378,16 +475,13 @@ function App() {
   const [game, setGame] = useState<GameState | null>(null)
   const [handOpenFor, setHandOpenFor] = useState<string | null>(null)
   const [lastSetups, setLastSetups] = useState<SetupPlayer[]>(defaultPlayers)
-  const [removalActive, setRemovalActive] = useState(false)
-  const [removalRunKey, setRemovalRunKey] = useState(0)
+  const [rulesOpen, setRulesOpen] = useState(false)
 
   const startGame = (setups: SetupPlayer[]) => {
     setLastSetups(setups)
     setGame(createGame(setups))
     setStage('playing')
     setHandOpenFor(null)
-    setRemovalActive(false)
-    setRemovalRunKey(0)
   }
 
   const handlePass = () => setGame((prev) => (prev ? passCard(prev) : prev))
@@ -397,14 +491,6 @@ function App() {
     () => (game ? getActivePlayer(game) : null),
     [game?.currentPlayerIndex, game?.players, game],
   )
-
-  useEffect(() => {
-    if (!game || game.status !== 'playing') return
-    setRemovalRunKey(Date.now())
-    setRemovalActive(true)
-    const stop = setTimeout(() => setRemovalActive(false), 9 * 110 + 500)
-    return () => clearTimeout(stop)
-  }, [game?.removed])
 
   useEffect(() => {
     if (!game || game.status !== 'playing') return
@@ -453,26 +539,39 @@ function App() {
   const isActiveHuman = !!activePlayer?.isHuman && game.status === 'playing'
   const passEnabled = isActiveHuman && canPass(game)
   const takeEnabled = isActiveHuman && canTake(game)
+  const positions = getPlayerPositions(game.players.length)
 
   return (
     <div className="app-shell">
       <div className="table-board">
-        <div className="table-ring" />
-        <RemovedPile animating={removalActive} runKey={removalRunKey} />
+        <button className="home-btn" onClick={() => setStage('setup')} aria-label="Home">
+          ⌂ Home
+        </button>
+        <button className="rules-btn" onClick={() => setRulesOpen(true)} aria-label="Rules">
+          Rules
+        </button>
+        <RemovedPile deckBack={`${baseUrl}back.png`} />
         <CenterArea
           activeCard={game.activeCard}
           chipsOnCard={game.chipsOnCard}
           deckCount={game.deck.length}
+          deckBack={`${baseUrl}back.png`}
         />
-        {game.players.map((p, idx) => (
-          <PlayerOrbit
-            key={p.id}
-            player={p}
-            index={idx}
-            total={game.players.length}
-            isActive={idx === game.currentPlayerIndex && game.status === 'playing'}
-          />
-        ))}
+        {game.players.map((p, idx) => {
+          const pos = positions[idx] ?? { left: 50, top: 50 }
+          let cardsPerRow = 4
+          if (game.players.length === 5 && idx === 4) cardsPerRow = 5
+          return (
+            <PlayerSpot
+              key={p.id}
+              player={p}
+              left={pos.left}
+              top={pos.top}
+              isActive={idx === game.currentPlayerIndex && game.status === 'playing'}
+              cardsPerRow={cardsPerRow}
+            />
+          )
+        })}
       </div>
 
       <ControlBar
@@ -491,6 +590,8 @@ function App() {
       )}
 
       <Scoreboard state={game} onRematch={rematch} onNewGame={() => setStage('setup')} />
+      <EndModal game={game} onRematch={rematch} onHome={() => setStage('setup')} />
+      <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
 
       {activePlayer && (
         <HandModal
