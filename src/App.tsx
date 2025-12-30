@@ -303,25 +303,25 @@ const getPlayerPositions = (count: number): { left: number; top: number }[] => {
   if (count === 3) {
     return [
       { left: 50, top: 8 }, // top
-      { left: 15, top: 28 }, // left
       { left: 85, top: 28 }, // right
+      { left: 15, top: 28 }, // left
     ]
   }
   if (count === 4) {
     return [
       { left: 35, top: 12 },
       { left: 65, top: 12 },
-      { left: 15, top: 32 },
       { left: 85, top: 32 },
+      { left: 15, top: 32 },
     ]
   }
   if (count === 5) {
     return [
       { left: 35, top: 10 }, // top-left
       { left: 65, top: 10 }, // top-right
-      { left: 15, top: 32 }, // mid-left
-      { left: 85, top: 32 }, // mid-right
+      { left: 85, top: 32 }, // right
       { left: 50, top: 42 }, // center player (aligned with sides, slightly lower)
+      { left: 15, top: 32 }, // left
     ]
   }
   // default: simple circle
