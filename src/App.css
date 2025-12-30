@@ -453,7 +453,10 @@ button:hover:not(:disabled) {
 }
 
 .rules-modal {
-  max-width: 720px;
+  width: 70vw;
+  max-width: 1300px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .rules-list {
@@ -461,6 +464,74 @@ button:hover:not(:disabled) {
   padding-left: 20px;
   line-height: 1.5;
   color: rgba(1, 50, 52, 0.9);
+}
+
+.rules-body {
+  display: grid;
+  grid-template-columns: 1.1fr 1.4fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.rules-text {
+  display: block;
+}
+
+.rules-visuals {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.rules-card {
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  text-align: center;
+}
+
+.rules-card img {
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  border-radius: 12px;
+  object-fit: contain;
+  display: block;
+}
+
+.rules-card p {
+  margin-top: 4px;
+}
+
+.hero {
+  padding: 80px 0 40px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.hero-text h1 {
+  font-size: 72px;
+  margin: 4px 0 8px;
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  color: rgba(1, 50, 52, 0.8);
+  margin: 6px 0 16px;
+  text-align: center;
+}
+
+.setup-overlay {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.setup-modal {
+  max-width: 720px;
 }
 
 .warning {

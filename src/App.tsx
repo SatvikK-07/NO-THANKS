@@ -157,7 +157,7 @@ const SetupScreen = ({ onStart }: SetupScreenProps) => {
   const canStart = players.every((p) => p.name.trim().length > 0)
 
   return (
-    <div className="panel setup-panel">
+    <div className="panel setup-panel" id="setup">
       <p className="eyebrow">No Thanks!</p>
       <h1>Quick table setup</h1>
       <p className="muted">
@@ -219,7 +219,7 @@ const SetupScreen = ({ onStart }: SetupScreenProps) => {
           Reset
         </button>
         <button className="cta" disabled={!canStart} onClick={() => onStart(players)}>
-          Start playing
+          Start game
         </button>
       </div>
     </div>
@@ -333,7 +333,7 @@ const getPlayerPositions = (count: number): { left: number; top: number }[] => {
   })
 }
 
-const RulesModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+const RulesModal = ({ open, onClose, baseUrl }: { open: boolean; onClose: () => void; baseUrl: string }) => {
   if (!open) return null
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true">
@@ -344,14 +344,28 @@ const RulesModal = ({ open, onClose }: { open: boolean; onClose: () => void }) =
             Close
           </button>
         </div>
-        <ul className="rules-list">
-          <li>Deck has cards 3–35; 9 random cards are removed face-down and never shown.</li>
-          <li>Each player starts with 11 chips. Goal: lowest total score wins.</li>
-          <li>Your turn: either Pass (pay 1 chip onto the face-up card) or Take (take the card and all chips on it). If you have 0 chips, you must Take.</li>
-          <li>After you Take, you immediately face the next card and decide again, so you can take multiple in a row.</li>
-          <li>Scoring: Add card values, but consecutive runs only count the lowest card in that run. Subtract 1 point per chip you still have. Example: cards 27,28,29,30,10 with 5 chips → (27 + 10) – 5 = 32.</li>
-          <li>Winner: the player with the lowest final score.</li>
-        </ul>
+        <div className="rules-body">
+          <div className="rules-text">
+            <ul className="rules-list">
+              <li>Deck has cards 3–35; 9 random cards are removed face-down and never shown.</li>
+              <li>Each player starts with 11 chips. Goal: lowest total score wins.</li>
+              <li>Your turn: either Pass (pay 1 chip onto the face-up card) or Take (take the card and all chips on it). If you have 0 chips, you must Take.</li>
+              <li>After you Take, you immediately face the next card and decide again, so you can take multiple in a row.</li>
+              <li>Scoring: Add card values, but consecutive runs only count the lowest card in that run. Subtract 1 point per chip you still have. Example: cards 27,28,29,30,10 with 5 chips → (27 + 10) – 5 = 32.</li>
+              <li>Winner: the player with the lowest final score.</li>
+            </ul>
+          </div>
+          <div className="rules-visuals">
+            <div className="rules-card">
+              <img src={`${baseUrl}no1.png`} alt="Setup" />
+              <p className="muted">Setup</p>
+            </div>
+            <div className="rules-card">
+              <img src={`${baseUrl}no2.png`} alt="Scoring" />
+              <p className="muted">Scoring</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -476,6 +490,7 @@ function App() {
   const [handOpenFor, setHandOpenFor] = useState<string | null>(null)
   const [lastSetups, setLastSetups] = useState<SetupPlayer[]>(defaultPlayers)
   const [rulesOpen, setRulesOpen] = useState(false)
+  const [showSetup, setShowSetup] = useState(false)
 
   const startGame = (setups: SetupPlayer[]) => {
     setLastSetups(setups)
@@ -529,7 +544,34 @@ function App() {
   if (stage === 'setup') {
     return (
       <div className="app-shell">
-        <SetupScreen onStart={startGame} />
+        <div className="hero">
+          <div className="hero-text">
+            <p className="eyebrow">Party card classic</p>
+            <h1>No Thanks</h1>
+            <p className="hero-subtitle">
+              Pass chips, dodge disasters, and chain runs—keep your score minimum.
+            </p>
+            <button
+              className="cta"
+              onClick={() => {
+                setShowSetup(true)
+              }}
+            >
+              Play game
+            </button>
+          </div>
+        </div>
+        {showSetup && (
+          <div className="modal-backdrop" role="dialog" aria-modal="true">
+            <div className="modal setup-modal">
+              <div className="modal-header">
+                <h3>Quick table setup</h3>
+                <button className="ghost" onClick={() => setShowSetup(false)}>Close</button>
+              </div>
+              <SetupScreen onStart={startGame} />
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -591,7 +633,7 @@ function App() {
 
       <Scoreboard state={game} onRematch={rematch} onNewGame={() => setStage('setup')} />
       <EndModal game={game} onRematch={rematch} onHome={() => setStage('setup')} />
-      <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
+      <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} baseUrl={baseUrl} />
 
       {activePlayer && (
         <HandModal
